@@ -526,7 +526,7 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
                 onClick={() => setCurrentProduct({ id: "", name: "", price: 0, isTaxInclusive: true, categoryId: categories[0]?.id || "" })}
                 className="bg-natural-light-bg hover:bg-natural-border text-natural-text font-semibold text-xs py-2 px-4 rounded-xl transition cursor-pointer"
               >
-                إلغاء (Cancel)
+                Cancel
               </button>
             )}
             <button 
