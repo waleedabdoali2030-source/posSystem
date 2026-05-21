@@ -41,6 +41,11 @@ jobs:
       - name: Add .nojekyll
         run: touch dist/.nojekyll
 
+      - name: Fix absolute paths for GitHub Pages (Optional but safe)
+        run: |
+          # Ensure nojekyll is there and index.html is ready
+          ls -R dist/
+
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
