@@ -38,13 +38,8 @@ jobs:
       - name: Build Application
         run: npm run build
 
-      - name: Add .nojekyll
-        run: touch dist/.nojekyll
-
-      - name: Fix absolute paths for GitHub Pages (Optional but safe)
-        run: |
-          # Ensure nojekyll is there and index.html is ready
-          ls -R dist/
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
