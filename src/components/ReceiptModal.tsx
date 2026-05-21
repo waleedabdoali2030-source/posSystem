@@ -28,15 +28,32 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
 
   const qrSvg = generateQrSvg(b64Zatca);
 
+  const formatPrice = (v: number): string => {
+    return parseFloat(v.toFixed(2)).toString();
+  };
+
   const handlePrint = () => {
-    // Elegant printing mechanism that isolated the receipt structure for thermal rolls
+    // Elegant printing mechanism that isolates the receipt structure for thermal rolls
     const printContent = receiptConfigRef.current?.innerHTML;
-    const originalContent = document.body.innerHTML;
+    if (!printContent) return;
     
-    // Setup printable window context
-    const windowPrint = window.open("", "", "width=600,height=800");
-    if (windowPrint) {
-      windowPrint.document.write(`
+    // Create or locate hidden iframe for seamless sandboxed printing without popups blocking
+    let iframe = document.getElementById("print-iframe") as HTMLIFrameElement;
+    if (!iframe) {
+      iframe = document.createElement("iframe");
+      iframe.id = "print-iframe";
+      iframe.style.position = "absolute";
+      iframe.style.width = "0px";
+      iframe.style.height = "0px";
+      iframe.style.border = "none";
+      iframe.style.overflow = "hidden";
+      document.body.appendChild(iframe);
+    }
+
+    const iframeDoc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (iframeDoc) {
+      iframeDoc.open();
+      iframeDoc.write(`
         <html>
           <head>
             <title>Simplified Tax Invoice - Waleed POS</title>
@@ -67,14 +84,18 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
             </div>
             <script>
               window.onload = function() {
-                window.print();
-                setTimeout(function() { window.close(); }, 500);
+                window.focus();
               }
             </script>
           </body>
         </html>
       `);
-      windowPrint.document.close();
+      iframeDoc.close();
+
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 250);
     }
   };
 
@@ -158,8 +179,8 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
                     )}
                   </td>
                   <td className="py-2.5 text-center font-mono font-medium">{item.quantity}</td>
-                  <td className="py-2.5 text-right font-mono">{(item.price).toFixed(2)}</td>
-                  <td className="py-2.5 text-right font-mono">{(item.totalAmount).toFixed(2)}</td>
+                  <td className="py-2.5 text-right font-mono">{formatPrice(item.price)}</td>
+                  <td className="py-2.5 text-right font-mono">{formatPrice(item.totalAmount)}</td>
                 </tr>
               ))}
             </tbody>
@@ -171,18 +192,18 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
           <div className="space-y-2.5 font-sans">
             <div className="flex justify-between text-zinc-700">
               <span>Taxable Net (Excl. VAT):</span>
-              <span className="font-mono">{transaction.netAmount.toFixed(2)} SAR</span>
+              <span className="font-mono">{formatPrice(transaction.netAmount)} SAR</span>
             </div>
             <div className="flex justify-between text-zinc-700">
               <span>VAT Amount (15%):</span>
-              <span className="font-mono text-red-600">+{transaction.taxAmount.toFixed(2)} SAR</span>
+              <span className="font-mono text-red-600">+{formatPrice(transaction.taxAmount)} SAR</span>
             </div>
             
             <div className="border-t border-zinc-300 my-2" />
             
             <div className="flex justify-between items-center text-zinc-950 font-bold text-[13px]">
               <span>Invoice Total:</span>
-              <span className="font-mono text-emerald-600">{(transaction.totalAmount).toFixed(2)} SAR</span>
+              <span className="font-mono text-emerald-600">{formatPrice(transaction.totalAmount)} SAR</span>
             </div>
 
             {/* Cash transactions Change computations display */}
@@ -190,11 +211,11 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
               <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-100 font-mono text-[10px] space-y-1">
                 <div className="flex justify-between text-zinc-600">
                   <span>Cash Tendered:</span>
-                  <span>{transaction.cashAmountReceived.toFixed(2)} SAR</span>
+                  <span>{formatPrice(transaction.cashAmountReceived)} SAR</span>
                 </div>
                 <div className="flex justify-between text-emerald-600 font-semibold">
                   <span>Change Given:</span>
-                  <span>{transaction.cashChangeGiven?.toFixed(2)} SAR</span>
+                  <span>{transaction.cashChangeGiven !== undefined ? formatPrice(transaction.cashChangeGiven) : "0"} SAR</span>
                 </div>
               </div>
             )}

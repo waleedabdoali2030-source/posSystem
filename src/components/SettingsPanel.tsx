@@ -44,6 +44,29 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
   // Payment Type State Editor
   const [currentPayment, setCurrentPayment] = useState<Partial<PaymentMethod>>({ id: "", name: "", icon: "CreditCard", color: "bg-emerald-600 text-white" });
 
+  // Inline Notification and Confirmation States
+  const [showSettingsSaved, setShowSettingsSaved] = useState(false);
+  const [categoryDeleteConfirmId, setCategoryDeleteConfirmId] = useState<string | null>(null);
+  const [productDeleteConfirmId, setProductDeleteConfirmId] = useState<string | null>(null);
+  const [paymentDeleteConfirmId, setPaymentDeleteConfirmId] = useState<string | null>(null);
+  const [paymentDeleteError, setPaymentDeleteError] = useState<string | null>(null);
+
+  // Advanced CRUD Validation & Inline Toast States (ZATCA/Professional Level validation)
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [categorySuccess, setCategorySuccess] = useState<string | null>(null);
+  
+  const [productError, setProductError] = useState<string | null>(null);
+  const [productSuccess, setProductSuccess] = useState<string | null>(null);
+
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
+
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+
+  const formatPrice = (v: number): string => {
+    return parseFloat(v.toFixed(2)).toString();
+  };
+
   useEffect(() => {
     loadAllData();
   }, []);
@@ -56,7 +79,10 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
     const c = await dbService.getCategories();
     setCategories(c);
     if (c.length > 0) {
-      setCurrentProduct(prev => ({ ...prev, categoryId: c[0].id }));
+      setCurrentProduct(prev => ({ 
+        ...prev, 
+        categoryId: prev.categoryId || c[0].id 
+      }));
     }
 
     const p = await dbService.getProducts();
@@ -66,96 +92,268 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
     setPayments(pay);
   };
 
+  // Helper clear-outs
+  const clearCategoryForm = () => {
+    setCurrentCategory({ id: "", name: "", color: "bg-emerald-500 text-white" });
+    setCategoryError(null);
+  };
+
+  const clearProductForm = () => {
+    setCurrentProduct({ 
+      id: "", 
+      name: "", 
+      price: 0, 
+      isTaxInclusive: true, 
+      categoryId: categories[0]?.id || "" 
+    });
+    setProductError(null);
+  };
+
+  const clearPaymentForm = () => {
+    setCurrentPayment({ id: "", name: "", icon: "CreditCard", color: "bg-emerald-600 text-white" });
+    setPaymentError(null);
+  };
+
   // 1. STORE CONFIG SAVE
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!settingsForm) return;
+
+    setSettingsError(null);
+    setShowSettingsSaved(false);
+
+    // Business Logic Validations
+    if (!settingsForm.phone?.trim()) {
+      setSettingsError("Primary contact mobile/phone number is required.");
+      return;
+    }
+    if (!settingsForm.address?.trim()) {
+      setSettingsError("Store dispatch/physical address is required.");
+      return;
+    }
+
+    const cleanTaxNo = settingsForm.taxNumber?.replace(/\s+/g, "") || "";
+    if (cleanTaxNo.length !== 15 || !/^\d+$/.test(cleanTaxNo)) {
+      setSettingsError("ZATCA Compliance: VAT Registration ID must be exactly 15 digits.");
+      return;
+    }
+
+    if (settingsForm.taxRate === undefined || settingsForm.taxRate < 0 || settingsForm.taxRate > 100) {
+      setSettingsError("Invalid VAT percentage. Must be a valid rate between 0 and 100%.");
+      return;
+    }
+
     await dbService.saveSettings(settingsForm);
     setSettings(settingsForm);
     onSettingsUpdate();
-    alert("Store Settings updated successfully!");
+    setShowSettingsSaved(true);
+    setTimeout(() => setShowSettingsSaved(false), 4500);
   };
 
   // 2. CATEGORY CRUD HANDLERS
   const handleSaveCategory = async () => {
-    if (!currentCategory.name) return;
+    setCategoryError(null);
+    setCategorySuccess(null);
+
+    const targetName = currentCategory.name?.trim();
+    if (!targetName) {
+      setCategoryError("Please enter a non-empty Category Name.");
+      return;
+    }
+
+    if (targetName.length > 35) {
+      setCategoryError("Category Name is too long (limit 35 characters).");
+      return;
+    }
+
+    // Check configuration uniqueness
+    const dupExists = categories.some(
+      cat => cat.name.toLowerCase() === targetName.toLowerCase() && cat.id !== currentCategory.id
+    );
+    if (dupExists) {
+      setCategoryError(`A category named "${targetName}" already exists.`);
+      return;
+    }
+
     const catToSave: Category = {
       id: currentCategory.id || `cat-${Date.now()}`,
-      name: currentCategory.name,
+      name: targetName,
       color: currentCategory.color || "bg-zinc-700 text-white"
     };
 
     await dbService.saveCategory(catToSave);
-    setCurrentCategory({ id: "", name: "", color: "bg-emerald-500 text-white" });
+    const op = currentCategory.id ? "upgraded & saved" : "created brand new";
+    setCategorySuccess(`Category "${targetName}" successfully ${op}!`);
+    clearCategoryForm();
     loadAllData();
+    setTimeout(() => setCategorySuccess(null), 4000);
   };
 
   const handleEditCategory = (c: Category) => {
+    setCategoryError(null);
     setCurrentCategory(c);
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (window.confirm("Confirm delete Category? This may affect the display of associated products.")) {
-      await dbService.deleteCategory(id);
-      loadAllData();
+    setCategoryError(null);
+    setCategorySuccess(null);
+
+    const matchCat = categories.find(c => c.id === id);
+    const catName = matchCat ? matchCat.name : "Category";
+
+    // Warn if associated products may be affected
+    const activeProductsWithCat = products.filter(p => p.categoryId === id);
+    let warningSuffix = "";
+    if (activeProductsWithCat.length > 0) {
+      warningSuffix = ` Notice: ${activeProductsWithCat.length} products are now uncategorized.`;
     }
+
+    await dbService.deleteCategory(id);
+    setCategorySuccess(`Category "${catName}" removed.${warningSuffix}`);
+    loadAllData();
+    setTimeout(() => setCategorySuccess(null), 4000);
   };
 
   // 3. PRODUCT CRUD HANDLERS
   const handleSaveProduct = async () => {
-    if (!currentProduct.name || currentProduct.price === undefined || !currentProduct.categoryId) return;
+    setProductError(null);
+    setProductSuccess(null);
+
+    const targetName = currentProduct.name?.trim();
+    if (!targetName) {
+      setProductError("Please enter a valid Item/Product Name.");
+      return;
+    }
+
+    if (targetName.length > 60) {
+      setProductError("Product Name has exceeded 60 characters limit.");
+      return;
+    }
+
+    const priceVal = currentProduct.price;
+    if (priceVal === undefined || isNaN(priceVal) || priceVal < 0) {
+      setProductError("Retail price cannot be negative or invalid number.");
+      return;
+    }
+
+    if (!currentProduct.categoryId) {
+      setProductError("A valid Product Category must be selected.");
+      return;
+    }
+
+    // Check duplicate product code/name
+    const dupExists = products.some(
+      p => p.name.toLowerCase() === targetName.toLowerCase() && p.id !== currentProduct.id
+    );
+    if (dupExists) {
+      setProductError(`An item with the name "${targetName}" is already registered.`);
+      return;
+    }
+
     const prodToSave: Product = {
       id: currentProduct.id || `prod-${Date.now()}`,
-      name: currentProduct.name,
-      price: parseFloat(currentProduct.price.toString()),
+      name: targetName,
+      price: parseFloat(priceVal.toString()),
       isTaxInclusive: !!currentProduct.isTaxInclusive,
       categoryId: currentProduct.categoryId
     };
 
     await dbService.saveProduct(prodToSave);
-    setCurrentProduct(prev => ({ id: "", name: "", price: 0, isTaxInclusive: true, categoryId: categories[0]?.id || "" }));
+    const op = currentProduct.id ? "updated" : "cataloged";
+    setProductSuccess(`Product "${targetName}" ${op} successfully!`);
+    
+    // Reset but preserve selected category for faster multi-item entries
+    setCurrentProduct(prev => ({ 
+      id: "", 
+      name: "", 
+      price: 0, 
+      isTaxInclusive: true, 
+      categoryId: prev.categoryId || categories[0]?.id || "" 
+    }));
     loadAllData();
+    setTimeout(() => setProductSuccess(null), 4000);
   };
 
   const handleEditProduct = (p: Product) => {
+    setProductError(null);
     setCurrentProduct(p);
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this product?")) {
-      await dbService.deleteProduct(id);
-      loadAllData();
-    }
+    setProductError(null);
+    setProductSuccess(null);
+
+    const matchPrd = products.find(p => p.id === id);
+    const prdName = matchPrd ? matchPrd.name : "Product";
+
+    await dbService.deleteProduct(id);
+    setProductSuccess(`Product "${prdName}" deleted from registry.`);
+    loadAllData();
+    setTimeout(() => setProductSuccess(null), 4000);
   };
 
   // 4. PAYMENT INTERFACES CRUD HANDLERS
   const handleSavePayment = async () => {
-    if (!currentPayment.name) return;
+    setPaymentError(null);
+    setPaymentSuccess(null);
+
+    const targetName = currentPayment.name?.trim();
+    if (!targetName) {
+      setPaymentError("Gateway/Method display name is required.");
+      return;
+    }
+
+    if (targetName.length > 25) {
+      setPaymentError("Gateway Name is too long (limit 25 characters).");
+      return;
+    }
+
+    // Uniqueness
+    const dupExists = payments.some(
+      pay => pay.name.toLowerCase() === targetName.toLowerCase() && pay.id !== currentPayment.id
+    );
+    if (dupExists) {
+      setPaymentError(`A gateway configured as "${targetName}" already exists.`);
+      return;
+    }
+
     const payToSave: PaymentMethod = {
       id: currentPayment.id || `pay-${Date.now()}`,
-      name: currentPayment.name,
+      name: targetName,
       icon: currentPayment.icon || "CreditCard",
-      color: currentPayment.color || "bg-zinc-700 text-white"
+      color: currentPayment.color || "bg-[#10b981] text-white"
     };
 
     await dbService.savePaymentMethod(payToSave);
-    setCurrentPayment({ id: "", name: "", icon: "CreditCard", color: "bg-emerald-600 text-white" });
+    const op = currentPayment.id ? "updated" : "deployed live";
+    setPaymentSuccess(`Payment Gateway "${targetName}" ${op}!`);
+    clearPaymentForm();
     loadAllData();
+    setTimeout(() => setPaymentSuccess(null), 4000);
   };
 
   const handleEditPayment = (p: PaymentMethod) => {
+    setPaymentError(null);
     setCurrentPayment(p);
   };
 
   const handleDeletePayment = async (id: string) => {
+    setPaymentError(null);
+    setPaymentSuccess(null);
+
     if (payments.length <= 1) {
-      alert("Must retain at least one payment channel.");
+      setPaymentDeleteError("ZATCA compliance error: POS registers must retain at least one configured payment method.");
+      setTimeout(() => setPaymentDeleteError(null), 4500);
       return;
     }
-    if (window.confirm("Confirm delete payment channel?")) {
-      await dbService.deletePaymentMethod(id);
-      loadAllData();
-    }
+
+    const matchPay = payments.find(p => p.id === id);
+    const payName = matchPay ? matchPay.name : "Gateway";
+
+    await dbService.deletePaymentMethod(id);
+    setPaymentSuccess(`Gateway "${payName}" deactivated.`);
+    loadAllData();
+    setTimeout(() => setPaymentSuccess(null), 4000);
   };
 
   // Predefined gorgeous colors for POS buttons
@@ -186,6 +384,13 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
             <Settings className="w-5 h-5" />
             <span>Store & Receipt Config</span>
           </legend>
+
+          {settingsError && (
+            <div className="bg-red-50 border border-red-200 text-red-700 rounded-2xl p-4 text-xs font-semibold leading-relaxed flex items-center gap-2 mt-4 animate-fade-in">
+              <span className="text-base select-none">⚠️</span>
+              <span>{settingsError}</span>
+            </div>
+          )}
 
           <form onSubmit={handleSaveSettings} className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <div className="space-y-4">
@@ -268,7 +473,12 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
               </div>
             </div>
 
-            <div className="md:col-span-2 flex justify-end">
+            <div className="md:col-span-2 flex justify-end items-center gap-4">
+              {showSettingsSaved && (
+                <span className="text-sm text-emerald-600 font-bold bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl animate-fade-in">
+                  ✓ Store settings updated successfully!
+                </span>
+              )}
               <motion.button 
                 whileTap={{ scale: 0.97 }}
                 type="submit" 
@@ -290,6 +500,17 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
             <Tag className="w-5 h-5 text-natural-accent" />
             <span>Product Categories</span>
           </h3>
+
+          {categoryError && (
+            <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs font-semibold leading-relaxed animate-fade-in">
+              ⚠️ {categoryError}
+            </div>
+          )}
+          {categorySuccess && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-semibold leading-relaxed animate-fade-in">
+              ✓ {categorySuccess}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#FAF8F5] p-4 rounded-2xl border border-natural-border/60">
             <div className="flex flex-col gap-1.5">
@@ -344,19 +565,40 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
                 <span className={`px-3 py-1.5 rounded-lg font-bold ${cat.color}`}>
                   {cat.name}
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <button 
                     onClick={() => handleEditCategory(cat)}
                     className="p-2 bg-white border border-natural-border text-natural-muted hover:text-natural-accent rounded-lg transition cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
-                  <button 
-                    onClick={() => handleDeleteCategory(cat.id)}
-                    className="p-2 bg-white border border-natural-border text-natural-muted hover:text-natural-coral rounded-lg transition cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {categoryDeleteConfirmId === cat.id ? (
+                    <div className="flex items-center gap-1 select-none">
+                      <button
+                        onClick={() => {
+                          handleDeleteCategory(cat.id).then(() => {
+                            setCategoryDeleteConfirmId(null);
+                          });
+                        }}
+                        className="px-2 py-1.5 bg-red-600 text-white font-bold rounded-lg transition hover:bg-red-700 text-[10px] cursor-pointer"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setCategoryDeleteConfirmId(null)}
+                        className="px-2 py-1.5 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition hover:bg-gray-300 text-[10px] cursor-pointer"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setCategoryDeleteConfirmId(cat.id)}
+                      className="p-2 bg-white border border-natural-border text-natural-muted hover:text-natural-coral rounded-lg transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -365,10 +607,28 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
 
         {/* SECTION 3: PAYMENT METHOD CRUD */}
         <div className="bg-white border border-natural-border p-6 rounded-3xl shadow-sm space-y-5">
-          <h3 className="text-md font-bold text-natural-text flex items-center gap-2">
-            <Coins className="w-5 h-5 text-natural-accent" />
-            <span>Payment Gateways</span>
-          </h3>
+          <div className="flex justify-between items-center flex-wrap gap-2">
+            <h3 className="text-md font-bold text-natural-text flex items-center gap-2">
+              <Coins className="w-5 h-5 text-natural-accent" />
+              <span>Payment Gateways</span>
+            </h3>
+            {paymentDeleteError && (
+              <span className="text-xs text-red-600 font-bold bg-red-50 border border-red-200 px-3 py-1.5 rounded-xl animate-fade-in">
+                {paymentDeleteError}
+              </span>
+            )}
+          </div>
+
+          {paymentError && (
+            <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs font-semibold leading-relaxed animate-fade-in">
+              ⚠️ {paymentError}
+            </div>
+          )}
+          {paymentSuccess && (
+            <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-semibold leading-relaxed animate-fade-in">
+              ✓ {paymentSuccess}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-[#FAF8F5] p-4 rounded-2xl border border-natural-border/60">
             <div className="flex flex-col gap-1.5">
@@ -449,19 +709,40 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
                   {p.icon === "Tag" && <Tag className="w-4 h-4" />}
                   <span>{p.name}</span>
                 </span>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <button 
                     onClick={() => handleEditPayment(p)}
                     className="p-2 bg-white border border-natural-border text-natural-muted hover:text-natural-accent rounded-lg transition cursor-pointer"
                   >
                     <Edit3 className="w-3.5 h-3.5" />
                   </button>
-                  <button 
-                    onClick={() => handleDeletePayment(p.id)}
-                    className="p-2 bg-white border border-natural-border text-natural-muted hover:text-natural-coral rounded-lg transition cursor-pointer animate-fade-in"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  {paymentDeleteConfirmId === p.id ? (
+                    <div className="flex items-center gap-1 select-none">
+                      <button
+                        onClick={() => {
+                          handleDeletePayment(p.id).then(() => {
+                            setPaymentDeleteConfirmId(null);
+                          });
+                        }}
+                        className="px-2 py-1.5 bg-red-600 text-white font-bold rounded-lg transition hover:bg-red-700 text-[10px] cursor-pointer"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => setPaymentDeleteConfirmId(null)}
+                        className="px-2 py-1.5 bg-gray-100 text-gray-700 border border-gray-200 rounded-lg transition hover:bg-gray-300 text-[10px] cursor-pointer"
+                      >
+                        No
+                      </button>
+                    </div>
+                  ) : (
+                    <button 
+                      onClick={() => setPaymentDeleteConfirmId(p.id)}
+                      className="p-2 bg-white border border-natural-border text-natural-muted hover:text-natural-coral rounded-lg transition cursor-pointer animate-fade-in"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -475,6 +756,17 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
           <Tag className="w-5 h-5 text-natural-teal" />
           <span>Products Master Catalog</span>
         </h3>
+
+        {productError && (
+          <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-xs font-semibold leading-relaxed animate-fade-in">
+            ⚠️ {productError}
+          </div>
+        )}
+        {productSuccess && (
+          <div className="p-3.5 bg-emerald-50 border border-emerald-200 text-emerald-700 rounded-2xl text-xs font-semibold leading-relaxed animate-fade-in">
+            ✓ {productSuccess}
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-[#FAF8F5] p-4 rounded-2xl border border-natural-border/60">
           <div className="flex flex-col gap-1.5">
@@ -556,7 +848,7 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
                 return (
                   <tr key={p.id} className="border-b border-natural-border/60 text-natural-text hover:bg-natural-light-bg/40 text-left">
                     <td className="p-4 font-semibold text-natural-text text-left">{p.name}</td>
-                    <td className="p-4 font-mono font-bold text-natural-accent text-left">{p.price.toFixed(2)} SAR</td>
+                    <td className="p-4 font-mono font-bold text-natural-accent text-left">{formatPrice(p.price)} SAR</td>
                     <td className="p-4 text-left">
                       {p.isTaxInclusive ? (
                         <span className="px-2 py-0.5 rounded-md text-[10px] bg-natural-teal/15 text-natural-teal border border-natural-teal/20">Tax Inclusive</span>
@@ -566,19 +858,40 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
                     </td>
                     <td className="p-4 font-medium text-left">{catName}</td>
                     <td className="p-4">
-                      <div className="flex justify-center gap-2">
+                      <div className="flex justify-center gap-2 items-center">
                         <button 
                           onClick={() => handleEditProduct(p)}
                           className="p-1.5 bg-white border border-natural-border text-natural-muted hover:text-natural-teal rounded-lg transition cursor-pointer"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
                         </button>
-                        <button 
-                          onClick={() => handleDeleteProduct(p.id)}
-                          className="p-1.5 bg-white border border-natural-border text-natural-muted hover:text-natural-coral rounded-lg transition cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        {productDeleteConfirmId === p.id ? (
+                          <div className="flex items-center gap-1 select-none">
+                            <button
+                              onClick={() => {
+                                handleDeleteProduct(p.id).then(() => {
+                                  setProductDeleteConfirmId(null);
+                                });
+                              }}
+                              className="px-2 py-1 bg-red-600 text-white font-bold rounded-md transition hover:bg-red-700 text-[9px] cursor-pointer"
+                            >
+                              Confirm
+                            </button>
+                            <button
+                              onClick={() => setProductDeleteConfirmId(null)}
+                              className="px-1.5 py-1 bg-gray-100 text-gray-700 border border-gray-200 rounded-md transition hover:bg-gray-200 text-[9px] cursor-pointer"
+                            >
+                              No
+                            </button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setProductDeleteConfirmId(p.id)}
+                            className="p-1.5 bg-white border border-natural-border text-natural-muted hover:text-natural-coral rounded-lg transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

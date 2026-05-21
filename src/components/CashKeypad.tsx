@@ -39,6 +39,10 @@ export default function CashKeypad({ totalAmount, onConfirm, onClose }: CashKeyp
     setCashInput("");
   };
 
+  const formatPrice = (v: number): string => {
+    return parseFloat(v.toFixed(2)).toString();
+  };
+
   const canSubmit = cashVal >= totalAmount;
 
   const handleSubmit = () => {
@@ -86,12 +90,12 @@ export default function CashKeypad({ totalAmount, onConfirm, onClose }: CashKeyp
         <div className="grid grid-cols-2 gap-3.5 mb-1.5 font-mono">
           <div className="bg-natural-light-bg p-3 rounded-2xl border border-natural-border">
             <span className="text-[10px] text-natural-muted block uppercase font-bold">Total Bill Amount</span>
-            <span className="text-lg font-bold text-natural-text">{totalAmount.toFixed(2)} <span className="text-xs text-natural-accent font-sans">SAR</span></span>
+            <span className="text-lg font-bold text-natural-text">{formatPrice(totalAmount)} <span className="text-xs text-natural-accent font-sans">SAR</span></span>
           </div>
           <div className={`p-3 rounded-2xl border transition ${canSubmit ? "bg-emerald-50 border-emerald-300" : "bg-natural-light-bg border-natural-border"}`}>
             <span className="text-[10px] text-natural-muted block uppercase font-bold">Change Due</span>
             <span className={`text-lg font-bold ${canSubmit ? "text-emerald-700" : "text-natural-text/40"}`}>
-              {canSubmit ? changeDue.toFixed(2) : "0.00"} <span className="text-xs font-sans">SAR</span>
+              {canSubmit ? formatPrice(changeDue) : "0"} <span className="text-xs font-sans">SAR</span>
             </span>
           </div>
         </div>

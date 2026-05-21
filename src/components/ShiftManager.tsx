@@ -18,6 +18,11 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
   const [days, setDays] = useState<WorkDay[]>([]);
   const [selectedSummary, setSelectedSummary] = useState<DaySummary | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCloseDayConfirmOpen, setIsCloseDayConfirmOpen] = useState(false);
+
+  const formatPrice = (v: number): string => {
+    return parseFloat(v.toFixed(2)).toString();
+  };
 
   useEffect(() => {
     loadShifts();
@@ -53,10 +58,9 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
 
   const handleCloseDay = async () => {
     if (!currentDay) return;
-    if (window.confirm("Are you sure you want to CLOSE the register today? Next receipt sequence starts from 1.")) {
-      await dbService.closeDay(currentDay.id);
-      onShiftChange();
-    }
+    await dbService.closeDay(currentDay.id);
+    setIsCloseDayConfirmOpen(false);
+    onShiftChange();
   };
 
   const handlePrint = () => {
@@ -107,14 +111,36 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
 
         <div className="flex flex-col gap-3">
           {currentDay ? (
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              onClick={handleCloseDay}
-              className="w-full bg-natural-coral hover:bg-natural-coral-hover text-white font-bold py-4 px-6 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition cursor-pointer"
-            >
-              <Power className="w-5 h-5" />
-              <span>Close Register</span>
-            </motion.button>
+            isCloseDayConfirmOpen ? (
+              <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex flex-col gap-3 animate-fade-in text-center shadow-inner">
+                <span className="text-xs text-red-700 font-bold leading-relaxed">
+                  Are you sure you want to CLOSE the register today? Next receipt sequence starts from 1.
+                </span>
+                <div className="flex gap-2.5">
+                  <button
+                    onClick={handleCloseDay}
+                    className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-4 rounded-xl text-xs transition active:scale-95 cursor-pointer shadow-sm"
+                  >
+                    Confirm Close
+                  </button>
+                  <button
+                    onClick={() => setIsCloseDayConfirmOpen(false)}
+                    className="flex-1 bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 font-bold py-2.5 px-4 rounded-xl text-xs transition active:scale-95 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                onClick={() => setIsCloseDayConfirmOpen(true)}
+                className="w-full bg-natural-coral hover:bg-natural-coral-hover text-white font-bold py-4 px-6 rounded-2xl shadow-sm flex items-center justify-center gap-2 transition cursor-pointer"
+              >
+                <Power className="w-5 h-5" />
+                <span>Close Register</span>
+              </motion.button>
+            )
           ) : (
             <motion.button
               whileTap={{ scale: 0.97 }}
@@ -184,15 +210,15 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-natural-border shadow-sm">
                     <span className="text-[11px] text-natural-muted block font-medium">Net Sales (Excl. VAT)</span>
-                    <span className="text-lg font-bold text-natural-text font-mono">{selectedSummary.netSales.toFixed(2)} <span className="text-xs text-natural-accent">SAR</span></span>
+                    <span className="text-lg font-bold text-natural-text font-mono">{formatPrice(selectedSummary.netSales)} <span className="text-xs text-natural-accent">SAR</span></span>
                   </div>
                   <div className="bg-white p-3 rounded-xl border border-natural-border shadow-sm">
                     <span className="text-[11px] text-natural-muted block font-medium">VAT Total</span>
-                    <span className="text-lg font-bold text-natural-coral font-mono">{selectedSummary.taxSales.toFixed(2)} <span className="text-xs">SAR</span></span>
+                    <span className="text-lg font-bold text-natural-coral font-mono">{formatPrice(selectedSummary.taxSales)} <span className="text-xs">SAR</span></span>
                   </div>
                   <div className="bg-natural-light-bg p-3 rounded-xl border border-natural-accent/20 shadow-sm animate-pulse-slow">
                     <span className="text-[11px] text-natural-accent block font-medium">Total Sales (Incl. VAT)</span>
-                    <span className="text-lg font-bold text-natural-teal font-mono">{(selectedSummary.totalSales).toFixed(2)} <span className="text-xs">SAR</span></span>
+                    <span className="text-lg font-bold text-natural-teal font-mono">{formatPrice(selectedSummary.totalSales)} <span className="text-xs">SAR</span></span>
                   </div>
                 </div>
 
@@ -208,7 +234,7 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
                       Object.entries(selectedSummary.salesByPayment).map(([payName, amt]) => (
                         <div key={payName} className="flex justify-between items-center text-xs font-mono py-1.5 border-b border-natural-border/60 last:border-none">
                           <span className="text-natural-muted flex items-center gap-1.5">{payName}</span>
-                          <span className="text-natural-text font-bold">{(amt as number).toFixed(2)} SAR</span>
+                          <span className="text-natural-text font-bold">{formatPrice(amt as number)} SAR</span>
                         </div>
                       ))
                     )}

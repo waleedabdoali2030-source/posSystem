@@ -18,6 +18,10 @@ interface ProductsGridProps {
 export default function ProductsGrid({ onAddItem, categories, products }: ProductsGridProps) {
   const [activeCategoryId, setActiveCategoryId] = useState<string>("all");
 
+  const formatPrice = (v: number): string => {
+    return parseFloat(v.toFixed(2)).toString();
+  };
+
   const filteredProducts = activeCategoryId === "all" 
     ? products 
     : products.filter(p => p.categoryId === activeCategoryId);
@@ -101,7 +105,7 @@ export default function ProductsGrid({ onAddItem, categories, products }: Produc
                     <div className="flex justify-between items-baseline mt-auto pt-3">
                       <div>
                         <span className="text-lg font-bold font-mono text-natural-text block tracking-tight">
-                          {prod.price.toFixed(2)}
+                          {formatPrice(prod.price)}
                         </span>
                         <span className="text-[9px] text-natural-muted font-sans block leading-none font-semibold">SAR (Saudi Riyal)</span>
                       </div>

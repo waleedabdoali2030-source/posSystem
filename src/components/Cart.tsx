@@ -26,6 +26,10 @@ export default function Cart({
   onCheckout
 }: CartProps) {
   
+  const formatPrice = (v: number): string => {
+    return parseFloat(v.toFixed(2)).toString();
+  };
+
   // Computations for active items considering Saudi 15% VAT Tax inclusive vs exclusive rules
   const calculateCartTotals = () => {
     let subtotalNoTax = 0; // Exclude tax for calculation
@@ -115,7 +119,7 @@ export default function Cart({
                 <div className="flex-1 space-y-1 text-right">
                   <span className="font-semibold text-natural-text line-clamp-1">{item.name}</span>
                   <div className="flex gap-2 text-[10px] text-natural-muted">
-                    <span className="font-mono">{(item.price).toFixed(2)} SAR</span>
+                    <span className="font-mono">{formatPrice(item.price)} SAR</span>
                     <span>&bull;</span>
                     {item.isTaxInclusive ? (
                       <span className="text-emerald-600 font-bold">No extra VAT</span>
@@ -143,7 +147,7 @@ export default function Cart({
                 </div>
 
                 <div className="text-right font-mono font-bold text-natural-text min-w-[50px]">
-                  {(item.price * item.quantity).toFixed(2)}
+                  {formatPrice(item.price * item.quantity)}
                 </div>
               </motion.div>
             ))}
@@ -155,16 +159,16 @@ export default function Cart({
       <div className="border-t border-natural-border pt-3.5 mt-3 space-y-2.5">
         <div className="flex justify-between items-center text-xs text-natural-muted">
           <span>Taxable Net:</span>
-          <span className="font-mono text-sm font-semibold text-natural-text">{totals.netAmount.toFixed(2)} SAR</span>
+          <span className="font-mono text-sm font-semibold text-natural-text">{formatPrice(totals.netAmount)} SAR</span>
         </div>
         <div className="flex justify-between items-center text-xs text-natural-muted">
           <span>VAT (15%):</span>
-          <span className="font-mono text-sm font-semibold text-natural-coral">+{totals.taxAmount.toFixed(2)} SAR</span>
+          <span className="font-mono text-sm font-semibold text-natural-coral">+{formatPrice(totals.taxAmount)} SAR</span>
         </div>
         <div className="border-t border-dashed border-natural-border my-1" />
         <div className="flex justify-between items-center text-sm font-bold text-natural-text">
           <span>Total Sales (Incl. VAT):</span>
-          <span className="font-mono text-natural-accent text-lg font-black tracking-tight">{(totals.totalAmount).toFixed(2)} <span className="text-xs">SAR</span></span>
+          <span className="font-mono text-natural-accent text-lg font-black tracking-tight">{formatPrice(totals.totalAmount)} <span className="text-xs">SAR</span></span>
         </div>
       </div>
 
