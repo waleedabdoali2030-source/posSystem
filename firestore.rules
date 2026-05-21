@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net (Default Deny Catch-all)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reuseable validation helpers
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Settings Collection Rules
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if docId == 'store' 
+                    && incoming().phone is string && incoming().phone.size() <= 32
+                    && incoming().address is string && incoming().address.size() <= 256
+                    && incoming().receiptHeader is string && incoming().receiptHeader.size() <= 512
+                    && incoming().receiptFooter is string && incoming().receiptFooter.size() <= 512
+                    && incoming().taxNumber is string && incoming().taxNumber.size() <= 32
+                    && incoming().taxRate is number && incoming().taxRate >= 0 && incoming().taxRate <= 100;
+    }
+
+    // Categories Collection Rules
+    match /categories/{catId} {
+      allow read: if true;
+      allow create, update: if isValidId(catId)
+                             && incoming().name is string && incoming().name.size() <= 128
+                             && incoming().color is string && incoming().color.size() <= 64;
+      allow delete: if true;
+    }
+
+    // Products Collection Rules
+    match /products/{prodId} {
+      allow read: if true;
+      allow create, update: if isValidId(prodId)
+                             && incoming().name is string && incoming().name.size() <= 128
+                             && incoming().price is number && incoming().price >= 0
+                             && incoming().isTaxInclusive is bool
+                             && incoming().categoryId is string && incoming().categoryId.size() <= 128;
+      allow delete: if true;
+    }
+
+    // Payment Methods Collection Rules
+    match /paymentMethods/{payId} {
+      allow read: if true;
+      allow create, update: if isValidId(payId)
+                             && incoming().name is string && incoming().name.size() <= 128
+                             && incoming().icon is string && incoming().icon.size() <= 64
+                             && incoming().color is string && incoming().color.size() <= 64;
+      allow delete: if true;
+    }
+
+    // WorkDays (Shifts) Collection Rules
+    match /workDays/{dayId} {
+      allow read: if true;
+      allow create: if isValidId(dayId)
+                     && incoming().dateStr is string
+                     && incoming().openedAt is string
+                     && incoming().status == 'open'
+                     && incoming().transactionCount is number && incoming().transactionCount >= 0;
+      allow update: if isValidId(dayId)
+                     && incoming().status in ['open', 'closed']
+                     && incoming().transactionCount is number && incoming().transactionCount >= existing().transactionCount;
+      allow delete: if false;
+    }
+
+    // Transactions Collection Rules
+    match /transactions/{transId} {
+      allow read: if true;
+      allow create: if isValidId(transId)
+                     && incoming().receiptNo is number && incoming().receiptNo >= 1
+                     && incoming().netAmount is number && incoming().netAmount >= 0
+                     && incoming().taxAmount is number && incoming().taxAmount >= 0
+                     && incoming().totalAmount is number && incoming().totalAmount >= 0
+                     && incoming().paymentMethodId is string && incoming().paymentMethodId.size() <= 128
+                     && incoming().paymentMethodName is string && incoming().paymentMethodName.size() <= 128
+                     && incoming().timestamp is string
+                     && incoming().dayId is string && incoming().dayId.size() <= 128;
+      allow update, delete: if false; // Transactions are strictly immutable
+    }
+  }
+}

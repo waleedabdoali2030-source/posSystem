@@ -1,0 +1,109 @@
+{
+  "entities": {
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Store location, custom receipt messages, tax configuration, and VAT number.",
+      "type": "object",
+      "properties": {
+        "phone": { "type": "string", "description": "Store phone number" },
+        "address": { "type": "string", "description": "Store physically address" },
+        "receiptHeader": { "type": "string", "description": "Receipt header message" },
+        "receiptFooter": { "type": "string", "description": "Receipt footer message" },
+        "taxNumber": { "type": "string", "description": "Saudi VAT Tax Identification Number" },
+        "taxRate": { "type": "number", "description": "VAT Tax Rate percent (standard 15)" }
+      },
+      "required": ["phone", "address", "receiptHeader", "receiptFooter", "taxNumber", "taxRate"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product categories for grouping in POS interface.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Category name in English/Arabic" },
+        "color": { "type": "string", "description": "Hex color or Tailwind color class for POS grid" }
+      },
+      "required": ["name", "color"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Item with pricing, tax rules, and matching category.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Item name" },
+        "price": { "type": "number", "description": "Price of the product" },
+        "isTaxInclusive": { "type": "boolean", "description": "True if price contains tax already; False if tax should be added" },
+        "categoryId": { "type": "string", "description": "Associated Category Identifier" }
+      },
+      "required": ["name", "price", "isTaxInclusive", "categoryId"]
+    },
+    "PaymentMethod": {
+      "title": "PaymentMethod",
+      "description": "Supported currency, cards, or POS endpoints (cash, mada, etc.).",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Method of payment" },
+        "icon": { "type": "string", "description": "Lucide icon string" },
+        "color": { "type": "string", "description": "Visual color hex or Tailwind class" },
+        "isDefault": { "type": "boolean", "description": "Is standard fallback" }
+      },
+      "required": ["name", "icon", "color"]
+    },
+    "WorkDay": {
+      "title": "WorkDay",
+      "description": "Shift opening and closing details, starting transactional numbers from 1.",
+      "type": "object",
+      "properties": {
+        "dateStr": { "type": "string", "description": "ISO date string" },
+        "openedAt": { "type": "string", "description": "Timestamp when shift began" },
+        "closedAt": { "type": "string", "description": "Timestamp when shift was closed (nullable)" },
+        "status": { "type": "string", "enum": ["open", "closed"], "description": "Shift status" },
+        "transactionCount": { "type": "number", "description": "Counter starting at 1 for shift receipts" }
+      },
+      "required": ["dateStr", "openedAt", "status", "transactionCount"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "A single POS sales record completed in the current workday.",
+      "type": "object",
+      "properties": {
+        "receiptNo": { "type": "number", "description": "Day-scoped sequential receipt counter" },
+        "netAmount": { "type": "number", "description": "Amount excluding tax (SAR)" },
+        "taxAmount": { "type": "number", "description": "Calculated total VAT amount (SAR)" },
+        "totalAmount": { "type": "number", "description": "Gross invoice amount with tax (SAR)" },
+        "paymentMethodId": { "type": "string", "description": "Payment type identifier" },
+        "paymentMethodName": { "type": "string", "description": "Payment type name to print" },
+        "cashAmountReceived": { "type": "number", "description": "Input cash for standard bills" },
+        "cashChangeGiven": { "type": "number", "description": "Returned balance for cash transactions" },
+        "timestamp": { "type": "string", "description": "Transaction date-time" },
+        "dayId": { "type": "string", "description": "Associated Shift identifier" }
+      },
+      "required": ["receiptNo", "netAmount", "taxAmount", "totalAmount", "paymentMethodId", "paymentMethodName", "timestamp", "dayId"]
+    }
+  },
+  "firestore": {
+    "settings": {
+      "schema": "StoreSettings",
+      "description": "Main global POS configuration document"
+    },
+    "categories": {
+      "schema": "Category",
+      "description": "Collection of all POS sections and categories"
+    },
+    "products": {
+      "schema": "Product",
+      "description": "POS product item master catalog"
+    },
+    "paymentMethods": {
+      "schema": "PaymentMethod",
+      "description": "Interactive payment routes listed inside POS terminal"
+    },
+    "workDays": {
+      "schema": "WorkDay",
+      "description": "All opening and closing chronological shifts"
+    },
+    "transactions": {
+      "schema": "Transaction",
+      "description": "Receipt order log of all finalized sales"
+    }
+  }
+}

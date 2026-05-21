@@ -1,0 +1,6 @@
+{
+  "name": "POS System",
+  "description": "A colorful and friendly Point of Sale (POS) system designed for Saudi Arabia. It supports lock-screen security keypads, categories and products catalog management, shift reports (Z-Reports), and printed simplified tax receipts featuring ZATCA-compliant QR Codes.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
