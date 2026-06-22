@@ -5,8 +5,14 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: './',
+    base: '/posSystem/',
     plugins: [react(), tailwindcss()],
+    build: {
+      outDir: 'dist',
+      rollupOptions: {
+        input: 'index.html',
+      },
+    },
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
