@@ -252,33 +252,48 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
         {/* Chronological list of past dates */}
         <div className="mt-6 border-t border-natural-border pt-4">
           <h4 className="text-xs font-bold text-natural-muted uppercase tracking-widest mb-3">Historical Ledgers</h4>
-          <div className="flex gap-2.5 overflow-x-auto pb-1 max-w-full">
-            {days.length === 0 ? (
-              <span className="text-xs text-natural-muted font-mono">No historical shifts created yet.</span>
-            ) : (
-              days.map((day) => (
-                <button
-                  key={day.id}
-                  onClick={() => viewSummary(day.id)}
-                  className={`flex-shrink-0 text-left px-4 py-3 rounded-xl border transition flex flex-col gap-1.5 cursor-pointer ${
-                    day.id === selectedSummary?.dayId
-                      ? "bg-natural-accent/15 border-natural-accent text-natural-accent"
-                      : "bg-[#FAF8F5] border-natural-border text-natural-muted hover:border-natural-accent/50 hover:text-natural-text"
-                  }`}
-                >
-                  <div className="flex items-center gap-2 font-semibold text-xs font-mono">
-                    <span className="text-natural-text font-bold">{day.dateStr}</span>
-                    <span className={`px-1.5 py-0.5 rounded text-[9px] uppercase font-bold ${
-                      day.status === "open" ? "bg-natural-teal/15 text-natural-teal border border-natural-teal/20" : "bg-natural-border text-natural-muted"
-                    }`}>
-                      {day.status}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-natural-muted">Bills Count: {day.transactionCount}</span>
-                </button>
-              ))
-            )}
-          </div>
+          {days.length === 0 ? (
+            <span className="text-xs text-natural-muted font-mono">No historical shifts created yet.</span>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-natural-border text-natural-muted font-bold text-[10px] uppercase">
+                    <th className="py-2 px-3">#</th>
+                    <th className="py-2 px-3">Date</th>
+                    <th className="py-2 px-3">Status</th>
+                    <th className="py-2 px-3 text-right">Bills</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {days.map((day, index) => (
+                    <tr
+                      key={day.id}
+                      onClick={() => viewSummary(day.id)}
+                      className={`border-b border-natural-border last:border-none cursor-pointer transition ${
+                        day.id === selectedSummary?.dayId
+                          ? "bg-natural-accent/10"
+                          : "hover:bg-natural-light-bg"
+                      }`}
+                    >
+                      <td className="py-3 px-3 font-mono font-bold text-natural-muted">{index + 1}</td>
+                      <td className="py-3 px-3 font-mono font-bold text-natural-text">{day.dateStr}</td>
+                      <td className="py-3 px-3">
+                        <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${
+                          day.status === "open" 
+                            ? "bg-natural-teal/15 text-natural-teal" 
+                            : "bg-neutral-100 text-neutral-600"
+                        }`}>
+                          {day.status}
+                        </span>
+                      </td>
+                      <td className="py-3 px-3 text-right text-natural-muted font-mono">{day.transactionCount}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

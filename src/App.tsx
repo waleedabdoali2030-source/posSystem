@@ -14,6 +14,7 @@ import ReceiptModal from "./components/ReceiptModal";
 import ProductsGrid from "./components/ProductsGrid";
 import Cart from "./components/Cart";
 import SettingsPanel from "./components/SettingsPanel";
+import TransactionHistory from "./components/TransactionHistory";
 import Footer from "./components/Footer";
 import { 
   ShoppingBag, 
@@ -23,13 +24,14 @@ import {
   LogOut, 
   CheckCircle,
   AlertTriangle,
-  Play
+  Play,
+  FileText
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
 export default function App() {
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"pos" | "shift" | "settings">("pos");
+  const [activeTab, setActiveTab] = useState<"pos" | "shift" | "settings" | "history">("pos");
   
   // Data State Collections
   const [currentDay, setCurrentDay] = useState<WorkDay | null>(null);
@@ -49,6 +51,15 @@ export default function App() {
   useEffect(() => {
     loadAppState();
   }, []);
+
+  // Update document title
+  useEffect(() => {
+    if (storeSettings?.storeName) {
+      document.title = storeSettings.storeName;
+    } else {
+      document.title = "POS System";
+    }
+  }, [storeSettings]);
 
   const loadAppState = async () => {
     const s = await dbService.getSettings();
@@ -260,6 +271,15 @@ export default function App() {
                   <span>POS Terminal</span>
                 </button>
                 <button
+                  onClick={() => setActiveTab("history")}
+                  className={`px-4.5 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition ${
+                    activeTab === "history" ? "bg-white text-natural-accent shadow-sm" : "text-natural-muted hover:text-natural-text"
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Invoices</span>
+                </button>
+                <button
                   onClick={() => setActiveTab("shift")}
                   className={`px-4.5 py-2 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition ${
                     activeTab === "shift" ? "bg-white text-natural-accent shadow-sm" : "text-natural-muted hover:text-natural-text"
@@ -347,6 +367,8 @@ export default function App() {
                 currentDay={currentDay} 
                 onShiftChange={loadAppState} 
               />
+            ) : activeTab === "history" ? (
+              <TransactionHistory onReprint={setReceiptTx} activeDayId={currentDay?.id} />
             ) : (
               <SettingsPanel onSettingsUpdate={loadAppState} />
             )}

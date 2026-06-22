@@ -34,6 +34,7 @@ function cleanUndefined<T>(obj: T): T {
 
 // Let's declare our default Saudi Arabia store constants
 const DEFAULT_SETTINGS: StoreSettings = {
+  storeName: "Waleed POS",                
   phone: "0503189758",
   address: "King Fahd Rd, Al Olaya District, Riyadh 12211, Saudi Arabia",
   receiptHeader: "Waleed Alqadasi Retail Stores\nSimplified Tax Invoice\nTax Registration Number (VAT TRN): 300503189758003",
