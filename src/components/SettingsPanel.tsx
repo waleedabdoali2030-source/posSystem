@@ -73,8 +73,17 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
 
   const loadAllData = async () => {
     const s = await dbService.getSettings();
-    setSettings(s);
-    setSettingsForm(s);
+    const defaults = {
+      storeName: s?.storeName || "",
+      phone: s?.phone || "",
+      address: s?.address || "",
+      receiptHeader: s?.receiptHeader || "",
+      receiptFooter: s?.receiptFooter || "",
+      taxNumber: s?.taxNumber || "",
+      taxRate: s?.taxRate ?? 15,
+    };
+    setSettings(s || defaults);
+    setSettingsForm(s || defaults);
 
     const c = await dbService.getCategories();
     setCategories(c);
