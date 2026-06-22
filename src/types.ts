@@ -4,6 +4,7 @@
  */
 
 export interface StoreSettings {
+  storeName: string;
   phone: string;
   address: string;
   receiptHeader: string;

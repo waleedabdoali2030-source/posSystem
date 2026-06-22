@@ -125,7 +125,8 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
           {/* Header */}
           <div className="text-center space-y-1">
             <pre className="font-bold text-center leading-relaxed text-zinc-900 block font-sans whitespace-pre-wrap">
-              {settings.receiptHeader || "Waleed Point Of Sale"}
+              {settings.storeName}<br/>
+              {settings.receiptHeader}
             </pre>
             <div className="text-[10px] text-zinc-650 font-mono">
               Tel: {settings.phone} <br />

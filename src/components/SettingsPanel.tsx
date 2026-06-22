@@ -123,6 +123,10 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
     setShowSettingsSaved(false);
 
     // Business Logic Validations
+    if (!settingsForm.storeName?.trim()) {
+      setSettingsError("Store name is required.");
+      return;
+    }
     if (!settingsForm.phone?.trim()) {
       setSettingsError("Primary contact mobile/phone number is required.");
       return;
@@ -394,6 +398,19 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
 
           <form onSubmit={handleSaveSettings} className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
             <div className="space-y-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs text-natural-muted font-semibold flex items-center gap-1">
+                  <Smartphone className="w-3.5 h-3.5 text-natural-teal" />
+                  <span>Store Name</span>
+                </label>
+                <input 
+                  type="text" 
+                  value={settingsForm.storeName}
+                  onChange={e => setSettingsForm({ ...settingsForm, storeName: e.target.value })}
+                  className="bg-natural-light-bg border border-natural-border rounded-xl px-4 py-3 text-natural-text font-mono text-sm focus:border-natural-accent focus:outline-none"
+                  required
+                />
+              </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-xs text-natural-muted font-semibold flex items-center gap-1">
                   <Smartphone className="w-3.5 h-3.5 text-natural-teal" />
@@ -788,6 +805,11 @@ export default function SettingsPanel({ onSettingsUpdate }: SettingsPanelProps) 
               onChange={(e) => setCurrentProduct({ ...currentProduct, price: parseFloat(e.target.value) || 0 })}
               className="bg-white border border-natural-border rounded-xl px-3.5 py-2.5 text-natural-text text-xs focus:border-natural-teal focus:outline-none"
             />
+            {currentProduct.isTaxInclusive && currentProduct.price > 0 && (
+              <span className="text-[10px] text-natural-teal font-sans">
+                Base Price (ex-VAT): {(currentProduct.price / (1 + ((settings?.taxRate || 15) / 100))).toFixed(2)} SAR
+              </span>
+            )}
           </div>
           <div className="flex flex-col gap-1.5">
             <label className="text-xs text-natural-muted font-semibold">Product Category</label>

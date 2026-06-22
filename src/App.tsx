@@ -234,10 +234,10 @@ export default function App() {
           <header className="bg-white border-b border-natural-border px-6 py-4 flex flex-col sm:flex-row justify-between items-center gap-4 sticky top-0 z-40 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-natural-accent rounded-xl flex items-center justify-center font-bold text-xl text-white shadow-md">
-                W
+                {storeSettings?.storeName?.charAt(0) || "W"}
               </div>
               <div>
-                <h1 className="text-md font-bold tracking-tight text-natural-text">Waleed POS Terminal</h1>
+                <h1 className="text-md font-bold tracking-tight text-natural-text">{storeSettings?.storeName || "POS Terminal"}</h1>
                 <div className="flex items-center gap-2 mt-0.5">
                   <span className={`w-2 h-2 rounded-full ${isFirebaseConfigured ? "bg-emerald-500 animate-pulse" : "bg-sky-500"}`} />
                   <span className="text-[10px] uppercase font-semibold text-natural-muted font-mono">
