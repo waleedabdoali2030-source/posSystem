@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: '/posSystem/',
+    base: './',
     plugins: [react(), tailwindcss()],
     build: {
       outDir: 'dist',
