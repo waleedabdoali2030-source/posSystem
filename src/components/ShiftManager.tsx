@@ -69,6 +69,20 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
 
   return (
     <div id="shift-manager" className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-4 max-w-7xl mx-auto">
+      <style>{`
+        @media print {
+          @page { margin: 0; size: 80mm auto; }
+          body * { visibility: hidden; }
+          #shift-print-area, #shift-print-area * { visibility: visible; }
+          #shift-print-area {
+            position: absolute;
+            left: 0; top: 0;
+            width: 72mm;
+            padding: 5mm;
+            font-size: 10px;
+          }
+        }
+      `}</style>
       
       {/* 1. SHIFT ACTION SWITCH */}
       <div className="lg:col-span-1 bg-white border border-natural-border rounded-3xl p-6 flex flex-col justify-between shadow-sm">
@@ -173,75 +187,44 @@ export default function ShiftManager({ currentDay, onShiftChange }: ShiftManager
             )}
           </div>
 
-          {isLoading ? (
-            <div className="h-48 flex items-center justify-center text-natural-muted font-mono text-xs">
-              Loading report details...
-            </div>
-          ) : selectedSummary ? (
-            <div id="shift-print-area" className="space-y-5">
-              {/* PRINT ONLY STYLES CONTAINER */}
-              <div className="bg-[#FAF8F5] rounded-2xl p-5 border border-natural-border space-y-4">
-                <div className="border-b border-natural-border pb-3 text-center">
-                  <h4 className="text-md font-bold text-natural-text">Register Z-Report</h4>
-                  <p className="text-[11px] text-natural-muted mt-1 font-mono">
-                    ID: {selectedSummary.dayId} &bull; Date: {selectedSummary.dateStr}
-                  </p>
+          {selectedSummary ? (
+              <div id="shift-print-area" className="bg-white p-2 text-black font-mono">
+                <div className="text-center mb-4">
+                  <h4 className="font-bold text-sm">Waleed POS</h4>
+                  <p className="text-[10px]">Z-REPORT</p>
+                  <p className="text-[10px]">Date: {selectedSummary.dateStr} | Time: {new Date().toLocaleTimeString()}</p>
                 </div>
 
-                {/* Shift start/end times */}
-                <div className="grid grid-cols-2 gap-4 text-xs font-mono text-natural-muted">
-                  <div>
-                    <span className="text-natural-muted block">Opened time:</span>
-                    <span>{new Date(selectedSummary.openedAt).toLocaleString()}</span>
-                  </div>
-                  <div>
-                    <span className="text-natural-muted block">Closed time:</span>
-                    <span>{selectedSummary.closedAt ? new Date(selectedSummary.closedAt).toLocaleString() : "Active Shift"}</span>
-                  </div>
+                <div className="border-t border-b border-black py-2 mb-2">
+                  <div className="flex justify-between"><span>Gross Sales:</span><span>{formatPrice(selectedSummary.totalSales + selectedSummary.taxSales)}</span></div>
+                  <div className="flex justify-between"><span>Tax (VAT 15%):</span><span>{formatPrice(selectedSummary.taxSales)}</span></div>
+                  <div className="flex justify-between font-bold text-xs mt-1"><span>Net Sales:</span><span>{formatPrice(selectedSummary.netSales)}</span></div>
+                  <div className="flex justify-between mt-1"><span>Bills Count:</span><span>{selectedSummary.totalTransactions}</span></div>
                 </div>
 
-                <div className="h-[1px] bg-natural-border" />
-
-                {/* Main numeric overview */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="bg-white p-3 rounded-xl border border-natural-border shadow-sm">
-                    <span className="text-[11px] text-natural-muted block font-medium">Bills Count</span>
-                    <span className="text-lg font-bold text-natural-text font-mono">{selectedSummary.totalTransactions}</span>
-                  </div>
-                  <div className="bg-white p-3 rounded-xl border border-natural-border shadow-sm">
-                    <span className="text-[11px] text-natural-muted block font-medium">Net Sales (Excl. VAT)</span>
-                    <span className="text-lg font-bold text-natural-text font-mono">{formatPrice(selectedSummary.netSales)} <span className="text-xs text-natural-accent">SAR</span></span>
-                  </div>
-                  <div className="bg-white p-3 rounded-xl border border-natural-border shadow-sm">
-                    <span className="text-[11px] text-natural-muted block font-medium">VAT Total</span>
-                    <span className="text-lg font-bold text-natural-coral font-mono">{formatPrice(selectedSummary.taxSales)} <span className="text-xs">SAR</span></span>
-                  </div>
-                  <div className="bg-natural-light-bg p-3 rounded-xl border border-natural-accent/20 shadow-sm animate-pulse-slow">
-                    <span className="text-[11px] text-natural-accent block font-medium">Total Sales (Incl. VAT)</span>
-                    <span className="text-lg font-bold text-natural-teal font-mono">{formatPrice(selectedSummary.totalSales)} <span className="text-xs">SAR</span></span>
-                  </div>
-                </div>
-
-                <div className="h-[1px] bg-natural-border" />
-
-                {/* Sales splits by payment gateways */}
-                <div>
-                  <h5 className="text-xs font-semibold text-natural-accent mb-2 uppercase tracking-wide">Payments Split</h5>
-                  <div className="space-y-2">
-                    {Object.entries(selectedSummary.salesByPayment).length === 0 ? (
-                      <div className="text-natural-muted text-xs font-mono py-2">No transaction records logged in this shift yet.</div>
-                    ) : (
-                      Object.entries(selectedSummary.salesByPayment).map(([payName, amt]) => (
-                        <div key={payName} className="flex justify-between items-center text-xs font-mono py-1.5 border-b border-natural-border/60 last:border-none">
-                          <span className="text-natural-muted flex items-center gap-1.5">{payName}</span>
-                          <span className="text-natural-text font-bold">{formatPrice(amt as number)} SAR</span>
+                <div className="mb-2">
+                  <h5 className="font-bold text-[10px] border-b border-black mb-1">Payments</h5>
+                  {Object.entries(selectedSummary.salesByPayment).map(([pName, data]) => {
+                    const typedData = data as { total: number, count: number };
+                    return (
+                        <div key={pName} className="flex justify-between text-[10px]">
+                            <span>{pName} ({typedData.count}):</span>
+                            <span>{formatPrice(typedData.total)}</span>
                         </div>
-                      ))
-                    )}
-                  </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mb-2">
+                  <h5 className="font-bold text-[10px] border-b border-black mb-1">Sales by Category</h5>
+                  {Object.entries(selectedSummary.salesByCategory).map(([cName, amt]) => (
+                    <div key={cName} className="flex justify-between text-[10px]">
+                      <span>{cName}:</span>
+                      <span>{formatPrice(amt as number)}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
-            </div>
           ) : (
             <div className="h-48 border border-dashed border-natural-border rounded-2xl flex items-center justify-center text-natural-muted text-xs">
               Select a shift ledger from historical logs to view settlement details.

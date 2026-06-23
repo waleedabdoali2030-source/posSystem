@@ -35,6 +35,12 @@ export interface PaymentMethod {
   isDefault?: boolean;
 }
 
+export interface PaymentDetail {
+  methodId: string;
+  methodName: string;
+  amount: number;
+}
+
 export interface TransactionItem {
   productId: string;
   name: string;
@@ -52,10 +58,9 @@ export interface Transaction {
   netAmount: number;   // Cumulative net before tax (SAR)
   taxAmount: number;   // Cumulative tax amount (SAR)
   totalAmount: number; // Total invoice amount with tax (SAR)
-  paymentMethodId: string;
-  paymentMethodName: string;
-  cashAmountReceived?: number; // Nullable if payment != cash
-  cashChangeGiven?: number;    // Nullable if payment != cash
+  payments: PaymentDetail[]; // Array of payments
+  cashAmountReceived?: number;
+  cashChangeGiven?: number;
   timestamp: string; // ISO String
   dayId: string; // Associated shift ID
 }
@@ -78,5 +83,6 @@ export interface DaySummary {
   netSales: number;
   taxSales: number;
   totalSales: number;
-  salesByPayment: { [paymentMethodName: string]: number };
+  salesByPayment: { [paymentMethodName: string]: { total: number, count: number } };
+  salesByCategory: { [categoryName: string]: number };
 }

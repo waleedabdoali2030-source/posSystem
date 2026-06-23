@@ -458,11 +458,14 @@ export const dbService = {
     if (!shift) return null;
 
     const txs = await this.getTransactions(dayId);
+    const products = await this.getProducts();
+    const categories = await this.getCategories();
     
     let netSales = 0;
     let taxSales = 0;
     let totalSales = 0;
-    const salesByPayment: { [paymentMethodName: string]: number } = {};
+    const salesByPayment: { [paymentMethodName: string]: { total: number, count: number } } = {};
+    const salesByCategory: { [categoryName: string]: number } = {};
 
     txs.forEach((tx) => {
       netSales += tx.netAmount;
@@ -470,7 +473,18 @@ export const dbService = {
       totalSales += tx.totalAmount;
 
       const pName = tx.paymentMethodName || "Cash";
-      salesByPayment[pName] = (salesByPayment[pName] || 0) + tx.totalAmount;
+      if (!salesByPayment[pName]) {
+        salesByPayment[pName] = { total: 0, count: 0 };
+      }
+      salesByPayment[pName].total += tx.totalAmount;
+      salesByPayment[pName].count += 1;
+
+      tx.items.forEach(item => {
+        const prod = products.find(p => p.id === item.productId);
+        const cat = prod ? categories.find(c => c.id === prod.categoryId) : null;
+        const catName = cat ? cat.name : "Uncategorized";
+        salesByCategory[catName] = (salesByCategory[catName] || 0) + item.totalAmount;
+      });
     });
 
     return {
@@ -482,7 +496,8 @@ export const dbService = {
       netSales: parseFloat(netSales.toFixed(2)),
       taxSales: parseFloat(taxSales.toFixed(2)),
       totalSales: parseFloat(totalSales.toFixed(2)),
-      salesByPayment
+      salesByPayment,
+      salesByCategory
     };
   }
 };

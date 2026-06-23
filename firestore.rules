@@ -84,11 +84,13 @@ service cloud.firestore {
                      && incoming().netAmount is number && incoming().netAmount >= 0
                      && incoming().taxAmount is number && incoming().taxAmount >= 0
                      && incoming().totalAmount is number && incoming().totalAmount >= 0
-                     && incoming().paymentMethodId is string && incoming().paymentMethodId.size() <= 128
-                     && incoming().paymentMethodName is string && incoming().paymentMethodName.size() <= 128
+                     && incoming().payments is list
                      && incoming().timestamp is string
                      && incoming().dayId is string && incoming().dayId.size() <= 128;
-      allow update, delete: if false; // Transactions are strictly immutable
+      allow update: if request.resource.data == resource.data;
+      allow delete: if false; // Transactions are strictly immutable
     }
   }
 }
+// Force-refresh rules
+

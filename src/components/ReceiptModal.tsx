@@ -152,9 +152,13 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
               <span>VAT Reg. No:</span>
               <span>{settings.taxNumber}</span>
             </div>
-            <div className="flex justify-between">
-              <span>Payment Type:</span>
-              <span>{transaction.paymentMethodName}</span>
+            <div className="flex justify-between items-start">
+              <span>Payment Details:</span>
+              <div className="flex flex-col items-end">
+                  {transaction.payments.map((p, i) => (
+                      <span key={i}>{p.methodName}: {formatPrice(p.amount)}</span>
+                  ))}
+              </div>
             </div>
           </div>
 
@@ -209,19 +213,24 @@ export default function ReceiptModal({ transaction, settings, onClose }: Receipt
               <span className="font-mono text-emerald-600">{formatPrice(transaction.totalAmount)} SAR</span>
             </div>
 
-            {/* Cash transactions Change computations display */}
-            {transaction.cashAmountReceived !== undefined && transaction.cashAmountReceived > 0 && (
-              <div className="bg-zinc-50 p-2 rounded-lg border border-zinc-100 font-mono text-[10px] space-y-1">
-                <div className="flex justify-between text-zinc-600">
-                  <span>Cash Tendered:</span>
-                  <span>{formatPrice(transaction.cashAmountReceived)} SAR</span>
-                </div>
-                <div className="flex justify-between text-emerald-600 font-semibold">
-                  <span>Change Given:</span>
-                  <span>{transaction.cashChangeGiven !== undefined ? formatPrice(transaction.cashChangeGiven) : "0"} SAR</span>
+            {/* Cash payments display */}
+            {transaction.payments.filter(p => p.methodName.toLowerCase().includes("cash")).map((p, i) => (
+              <div key={i} className="bg-zinc-50 p-2 rounded-lg border border-zinc-100 font-mono text-[10px] space-y-1">
+                <div className="flex justify-between text-zinc-700">
+                  <span>Cash Paid:</span>
+                  <span>{formatPrice(p.amount)} SAR</span>
                 </div>
               </div>
-            )}
+            ))}
+            {/* Other payments display */}
+            {transaction.payments.filter(p => !p.methodName.toLowerCase().includes("cash")).map((p, i) => (
+              <div key={i} className="bg-zinc-50 p-2 rounded-lg border border-zinc-100 font-mono text-[10px] space-y-1">
+                <div className="flex justify-between text-zinc-700">
+                  <span>Paid {p.methodName}:</span>
+                  <span>{formatPrice(p.amount)} SAR</span>
+                </div>
+              </div>
+            ))}
           </div>
 
           <div className="border-t border-dashed border-zinc-400 my-3.5" />

@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Category, Product, PaymentMethod, TransactionItem, WorkDay, StoreSettings, Transaction } from "./types";
+import { Category, Product, PaymentMethod, TransactionItem, WorkDay, StoreSettings, Transaction, PaymentDetail } from "./types";
 import { dbService } from "./lib/db";
 import { isFirebaseConfigured } from "./lib/firebase";
 import KeypadLogin from "./components/KeypadLogin";
@@ -124,7 +124,7 @@ export default function App() {
   };
 
   // Checkout Operations
-  const handleInitiateCheckout = (method: PaymentMethod) => {
+  const handleInitiateCheckout = (payments: PaymentDetail[]) => {
     if (cartItems.length === 0) return;
 
     // Calculate invoice totals
@@ -157,21 +157,13 @@ export default function App() {
 
     const totalBillSum = computedNet + computedTax;
 
-    if (method.name.toLowerCase().includes("cash")) {
-      // Trigger currency keypad overlay for cash calculation
-      setCashOverlayAmount(totalBillSum);
-    } else {
-      // Standard card checkouts (e.g. mada, visa), execute directly
-      handleFinalizeTransaction(method, totalBillSum, 0, undefined, undefined);
-    }
+    // Simply finalize with the payments provided
+    handleFinalizeTransaction(payments, totalBillSum);
   };
 
   const handleFinalizeTransaction = async (
-    method: PaymentMethod,
-    totalBill: number,
-    changeGiven: number,
-    cashReceived?: number,
-    changeAmount?: number
+    payments: PaymentDetail[],
+    totalBill: number
   ) => {
     if (!currentDay) return;
 
@@ -206,6 +198,12 @@ export default function App() {
     // Generate transaction receipt scoped to today's work ledger count
     const receiptNo = (currentDay.transactionCount || 0) + 1;
 
+    // Calculate main payment (first one)
+    const mainPayment = payments[0];
+    
+    // Check if cash was part of payments to handle old logic (cashAmountReceived/Given) - simplistic for now
+    const cashPayment = payments.find(p => p.methodName.toLowerCase().includes("cash"));
+
     const transaction: Transaction = {
       id: `tx-${Date.now()}`,
       receiptNo,
@@ -213,10 +211,9 @@ export default function App() {
       netAmount: parseFloat(netSum.toFixed(2)),
       taxAmount: parseFloat(taxSum.toFixed(2)),
       totalAmount: parseFloat(totalBill.toFixed(2)),
-      paymentMethodId: method.id,
-      paymentMethodName: method.name,
-      cashAmountReceived: cashReceived,
-      cashChangeGiven: changeAmount,
+      payments: payments,
+      cashAmountReceived: cashPayment?.amount,
+      cashChangeGiven: 0, // Simplify
       timestamp: new Date().toISOString(),
       dayId: currentDay.id
     };
@@ -381,7 +378,11 @@ export default function App() {
               onClose={() => setCashOverlayAmount(null)}
               onConfirm={(recv, change) => {
                 const cashMethod = payments.find(p => p.name.toLowerCase().includes("cash")) || payments[0];
-                handleFinalizeTransaction(cashMethod, cashOverlayAmount, change, recv, change);
+                handleFinalizeTransaction([{
+                    methodId: cashMethod.id,
+                    methodName: cashMethod.name,
+                    amount: cashOverlayAmount
+                }], cashOverlayAmount);
               }}
             />
           )}
